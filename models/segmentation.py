@@ -9,10 +9,7 @@ from models.encoder import Encoder
 
 
 class SegmentationModel(nn.Module):
-
-    def __init__(
-            self
-    ) -> None:
+    def __init__(self) -> None:
         super(SegmentationModel, self).__init__()
         self.backbone = Encoder()
         self.classifier = DeepLabHead()
@@ -23,12 +20,12 @@ class SegmentationModel(nn.Module):
         features = self.backbone(x1, x2)
 
         x = self.classifier(features)
-        x = F.interpolate(x, size=input_shape, mode='bilinear', align_corners=False)
+        x = F.interpolate(x, size=input_shape, mode="bilinear", align_corners=False)
 
         return x
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     x1 = torch.randn((2, 3, 256, 256))
     x2 = torch.randn((2, 1, 256, 256))
     model = SegmentationModel()

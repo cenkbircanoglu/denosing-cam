@@ -12,12 +12,7 @@ from voc12.utils import (
 
 class VOC12ClsCAMDataset(VOC12BaseDataset):
     def __init__(
-            self,
-            img_name_list_path,
-            root,
-            transforms=None,
-            cam_dir=None,
-            erase=False
+        self, img_name_list_path, root, transforms=None, cam_dir=None, erase=False
     ):
         super().__init__(img_name_list_path, root, transforms)
         self.cam_dir = cam_dir
@@ -28,9 +23,7 @@ class VOC12ClsCAMDataset(VOC12BaseDataset):
         if os.path.exists(path):
             return Image.open(path)
         img = self._cached_img
-        return Image.fromarray(
-            np.zeros((img.size[1], img.size[0])).astype(np.uint8)
-        )
+        return Image.fromarray(np.zeros((img.size[1], img.size[0])).astype(np.uint8))
 
     def __getitem__(self, idx):
         name = self.img_name_list[idx]

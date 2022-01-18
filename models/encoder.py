@@ -17,7 +17,7 @@ class Encoder(nn.Module):
         return torch.concat([y1, y2], 1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     x1 = torch.randn((2, 3, 256, 256))
     x2 = torch.randn((2, 1, 256, 256))
     model = Encoder()

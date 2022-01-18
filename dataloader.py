@@ -5,14 +5,9 @@ from voc12.datasets.pseudo_seg import VOC12ClsCAMDataset
 
 
 def train_data_loaders(root, train_list, val_list, cam_dir):
-    transform_train = presets.PresetTrain(
-        base_size=520, crop_size=512
-    )
+    transform_train = presets.PresetTrain(base_size=520, crop_size=512)
     ds_train = VOC12ClsCAMDataset(
-        img_name_list_path=train_list,
-        root=root,
-        transforms=transform_train,
-        erase=True
+        img_name_list_path=train_list, root=root, transforms=transform_train, erase=True
     )
     transform_val = presets.PresetEval()
 
@@ -21,7 +16,7 @@ def train_data_loaders(root, train_list, val_list, cam_dir):
         root=root,
         transforms=transform_val,
         cam_dir=cam_dir,
-        erase=False
+        erase=False,
     )
     data_loader_train = torch.utils.data.DataLoader(
         ds_train,

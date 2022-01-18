@@ -37,13 +37,9 @@ class RandomResize:
         size = random.randint(self.min_size, self.max_size)
         image = F.resize(image, size)
         if target1 is not None:
-            target1 = F.resize(
-                target1, size, interpolation=T.InterpolationMode.NEAREST
-            )
+            target1 = F.resize(target1, size, interpolation=T.InterpolationMode.NEAREST)
         if target2 is not None:
-            target2 = F.resize(
-                target2, size, interpolation=T.InterpolationMode.NEAREST
-            )
+            target2 = F.resize(target2, size, interpolation=T.InterpolationMode.NEAREST)
         return image, target1, target2
 
 
