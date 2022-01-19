@@ -23,10 +23,12 @@ def evaluate(model, data_loader, device, num_classes):
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = "Test:"
     with torch.inference_mode():
-        for image, target in metric_logger.log_every(data_loader, 100, header):
-            image, target = image.to(device), target.to(device)
-            output = model(image)
-            confmat.update(target.flatten(), output.argmax(1).flatten())
+        for d in metric_logger.log_every(data_loader, 100, header):
+            image = d["img"].to(device)
+            erased_cam_label = d["erased_cam_label"].float().to(device)
+            cam_label = d["cam_label"].float().to(device)
+            output = model(image, erased_cam_label)
+            confmat.update(cam_label.flatten(), output.argmax(1).flatten())
 
         confmat.reduce_from_all_processes()
 
@@ -46,13 +48,17 @@ def train_one_epoch(
 ):
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
-    metric_logger.add_meter("lr", utils.SmoothedValue(window_size=1, fmt="{value}"))
+    metric_logger.add_meter(
+        "lr", utils.SmoothedValue(window_size=1, fmt="{value}")
+    )
     header = f"Epoch: [{epoch}]"
-    for image, target in metric_logger.log_every(data_loader, print_freq, header):
-        image, target = image.to(device), target.to(device)
+    for d in metric_logger.log_every(data_loader, print_freq, header):
+        image = d["img"].to(device)
+        erased_cam_label = d["erased_cam_label"].float().to(device)
+        cam_label = d["cam_label"].float().to(device)
         with torch.cuda.amp.autocast(enabled=scaler is not None):
-            output = model(image)
-            loss = criterion(output, target)
+            output = model(image, erased_cam_label)
+            loss = criterion(output, cam_label)
 
         optimizer.zero_grad()
         if scaler is not None:
@@ -65,7 +71,9 @@ def train_one_epoch(
 
         lr_scheduler.step()
 
-        metric_logger.update(loss=loss.item(), lr=optimizer.param_groups[0]["lr"])
+        metric_logger.update(
+            loss=loss.item(), lr=optimizer.param_groups[0]["lr"]
+        )
 
 
 def main(args):
@@ -76,28 +84,31 @@ def main(args):
     device = torch.device(args.device)
 
     data_loader_train, data_loader_val = train_data_loaders(
-        args.root, args.train_list, args.val_list, args.cam_dir
+        args.root,
+        args.train_list,
+        args.val_list,
+        args.cam_dir,
+        batch_size=args.batch_size,
     )
 
     model = SegmentationModel()
     model.to(device)
-    if args.distributed:
-        model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
 
     model_without_ddp = model
-    if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
-        model_without_ddp = model.module
 
     params_to_optimize = [
         {
             "params": [
-                p for p in model_without_ddp.backbone.parameters() if p.requires_grad
+                p
+                for p in model_without_ddp.backbone.parameters()
+                if p.requires_grad
             ]
         },
         {
             "params": [
-                p for p in model_without_ddp.classifier.parameters() if p.requires_grad
+                p
+                for p in model_without_ddp.classifier.parameters()
+                if p.requires_grad
             ]
         },
     ]
@@ -113,7 +124,9 @@ def main(args):
     iters_per_epoch = len(data_loader_train)
     main_lr_scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer,
-        lambda x: (1 - x / (iters_per_epoch * (args.epochs - args.lr_warmup_epochs)))
+        lambda x: (
+            1 - x / (iters_per_epoch * (args.epochs - args.lr_warmup_epochs))
+        )
         ** 0.9,
     )
 
@@ -122,7 +135,9 @@ def main(args):
         args.lr_warmup_method = args.lr_warmup_method.lower()
         if args.lr_warmup_method == "linear":
             warmup_lr_scheduler = torch.optim.lr_scheduler.LinearLR(
-                optimizer, start_factor=args.lr_warmup_decay, total_iters=warmup_iters
+                optimizer,
+                start_factor=args.lr_warmup_decay,
+                total_iters=warmup_iters,
             )
         elif args.lr_warmup_method == "constant":
             warmup_lr_scheduler = torch.optim.lr_scheduler.ConstantLR(
@@ -183,7 +198,9 @@ def get_args_parser(add_help=True):
         description="PyTorch Segmentation Training", add_help=add_help
     )
 
-    parser.add_argument("--model", default="fcn_resnet101", type=str, help="model name")
+    parser.add_argument(
+        "--model", default="fcn_resnet101", type=str, help="model name"
+    )
     parser.add_argument(
         "--device",
         default="cuda",
@@ -213,7 +230,9 @@ def get_args_parser(add_help=True):
         metavar="N",
         help="number of data loading workers (default: 16)",
     )
-    parser.add_argument("--lr", default=0.01, type=float, help="initial learning rate")
+    parser.add_argument(
+        "--lr", default=0.01, type=float, help="initial learning rate"
+    )
     parser.add_argument(
         "--momentum", default=0.9, type=float, metavar="M", help="momentum"
     )
@@ -241,7 +260,9 @@ def get_args_parser(add_help=True):
     parser.add_argument(
         "--lr-warmup-decay", default=0.01, type=float, help="the decay for lr"
     )
-    parser.add_argument("--print-freq", default=10, type=int, help="print frequency")
+    parser.add_argument(
+        "--print-freq", default=10, type=int, help="print frequency"
+    )
     parser.add_argument(
         "--output-dir", default=".", type=str, help="path to save outputs"
     )
@@ -259,9 +280,15 @@ def get_args_parser(add_help=True):
     parser.add_argument(
         "--root", default="../vision/data/raw/VOCdevkit/VOC2012", type=str
     )
-    parser.add_argument("--train_list", default="./voc12/train_aug.txt", type=str)
+    parser.add_argument(
+        "--train_list", default="./voc12/train_aug.txt", type=str
+    )
     parser.add_argument("--val_list", default="./voc12/val.txt", type=str)
-    parser.add_argument("--cam_dir", default=None, type=str)
+    parser.add_argument(
+        "--cam_dir",
+        default="../end-to-end-wsss/outputs/end-to-end-wsss-pipeline/resnet101-deeplabv3/2022-01-16/pseudo_labels/segmentation",
+        type=str,
+    )
 
     return parser
 

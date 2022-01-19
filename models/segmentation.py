@@ -20,9 +20,15 @@ class SegmentationModel(nn.Module):
         features = self.backbone(x1, x2)
 
         x = self.classifier(features)
-        x = F.interpolate(x, size=input_shape, mode="bilinear", align_corners=False)
+        x = F.interpolate(
+            x, size=input_shape, mode="bilinear", align_corners=False
+        )
 
         return x
+
+    def train(self, mode: bool = True):
+        self.backbone.train(mode)
+        self.classifier.train(mode)
 
 
 if __name__ == "__main__":

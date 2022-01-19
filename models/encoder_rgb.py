@@ -10,7 +10,9 @@ class EncoderRGB(nn.Module):
         model1 = resnet50(
             pretrained=True, replace_stride_with_dilation=[False, True, True]
         )
-        self.model1 = IntermediateLayerGetter(model1, return_layers={"layer4": "out"})
+        self.model1 = IntermediateLayerGetter(
+            model1, return_layers={"layer4": "out"}
+        )
         self.dim_reduction = nn.Conv2d(2048, 1024, kernel_size=(1, 1))
 
     def forward(self, x):

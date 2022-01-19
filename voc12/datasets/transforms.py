@@ -37,9 +37,13 @@ class RandomResize:
         size = random.randint(self.min_size, self.max_size)
         image = F.resize(image, size)
         if target1 is not None:
-            target1 = F.resize(target1, size, interpolation=T.InterpolationMode.NEAREST)
+            target1 = F.resize(
+                target1, size, interpolation=T.InterpolationMode.NEAREST
+            )
         if target2 is not None:
-            target2 = F.resize(target2, size, interpolation=T.InterpolationMode.NEAREST)
+            target2 = F.resize(
+                target2, size, interpolation=T.InterpolationMode.NEAREST
+            )
         return image, target1, target2
 
 
@@ -66,10 +70,10 @@ class RandomCrop:
         crop_params = T.RandomCrop.get_params(image, (self.size, self.size))
         image = F.crop(image, *crop_params)
         if target1 is not None:
-            target1 = pad_if_smaller(target1, self.size, fill=255)
+            target1 = pad_if_smaller(target1, self.size, fill=0)
             target1 = F.crop(target1, *crop_params)
         if target2 is not None:
-            target2 = pad_if_smaller(target2, self.size, fill=255)
+            target2 = pad_if_smaller(target2, self.size, fill=0)
             target2 = F.crop(target2, *crop_params)
         return image, target1, target2
 

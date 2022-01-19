@@ -10,8 +10,12 @@ class EncoderBinary(nn.Module):
         model = resnet50(
             pretrained=True, replace_stride_with_dilation=[False, True, True]
         )
-        model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
-        self.model = IntermediateLayerGetter(model, return_layers={"layer4": "out"})
+        model.conv1 = nn.Conv2d(
+            1, 64, kernel_size=7, stride=2, padding=3, bias=False
+        )
+        self.model = IntermediateLayerGetter(
+            model, return_layers={"layer4": "out"}
+        )
         self.dim_reduction = nn.Conv2d(2048, 1024, kernel_size=(1, 1))
 
     def forward(self, x):
